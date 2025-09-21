@@ -1,0 +1,76 @@
+---
+# -- (Optional) When using a custom network
+networks:
+  proxy:
+    external: true
+
+# secrets:
+#   gd_api_token:
+#     file: ./config/gd_api_token.txt
+
+services:
+  traefik:
+    image: traefik:v3.5
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - proxy
+    ports:
+      - 80:80
+      - 443:443
+    # - 8080:8080 # -- (Optional) Enable Dashboard, don't do in production
+    environment:
+      TRAEFIK_DASBOARD_CREDENTIALS: ${TRAEFIK_DASBOARD_CREDENTIALS}
+    # secrets:
+    #   - gd_api_token
+    env_file: .env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/localtime:/etc/localtime:ro                      # OR use TZ=Europe/Madrid as envirnoment variable
+      #- ./config/traefik.yaml:/traefik.yaml:ro                # Base configuration file for traefik
+      #- ./config/acme.json:/acme.json                        # This file is used to store online certs we need to apply chmod 600 to this file.
+      #- ./config/certs/:/etc/traefik/certs/                  # This directory is for place a self signed certificates
+      #- ./users.txt:/users.txt:ro                            # We use this file to store authentications to traefik's dashboard
+      #- ./logs:/var/log/traefik                              # We mount in this directory all logs for traefik servide
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.traefik.entrypoints=web
+      #- traefik.http.routers.traefik-secure.entrypoints=websecure
+      # - traefik.http.routers.traefik-secure.middlewares=myauth@file
+      # - traefik.http.routers.traefik-secure.service=api@internal
+      # - traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=websecure
+
+
+  # Portainer
+  portainer:
+    image: portainer/portainer-ce:alpine
+    restart: unless-stopped
+    ports:
+      - 9000:9000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer-data:/data
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.portainer.tls=true
+      - traefik.http.routers.portainer.entrypoints=web, websecure
+      - traefik.http.services.portainer.loadbalancer.server.port=9000
+    depends_on:
+      - traefik
+    networks:
+      - proxy
+
+volumes:
+  portainer-data:
+    name: portainer-data
+
+
+# Seguridad para el Dashboard
+
+# Note: when used in docker-compose.yml all dollar signs in the hash need to be doubled for escaping.
+# To create user:password pair, it's possible to use this command:
+# echo $(htpasswd -nb user password) | sed -e s/\\$/\\$\\$/g
+# echo $(htpasswd -nb admin M4rk3tpl4c3++) | sed -e s/\\$/\\$\\$/g
+# Also note that dollar signs should NOT be doubled when they not evaluated (e.g. Ansible docker_container module).
+# pass -> M4rk3tpl4c3++
