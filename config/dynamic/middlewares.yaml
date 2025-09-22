@@ -30,6 +30,19 @@ http:
       basicAuth:
         usersFile: "/etc/traefik/users.txt"
 
+    # HTTPS redirect middleware (alternative to entrypoint redirect)
+    https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+    # HTTPS redirect with port (for specific cases)
+    https-redirect-port:
+      redirectScheme:
+        scheme: https
+        port: "443"
+        permanent: true
+
     # Rate limiting middleware
     rate-limit:
       rateLimit:

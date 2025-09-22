@@ -111,13 +111,18 @@ volumes:
 
 # Configuration Notes:
 #
+# HTTPS Enforcement:
+# - All HTTP traffic is automatically redirected to HTTPS
+# - HTTP routes are preserved for compatibility but will redirect
+# - Access services via HTTPS URLs: https://service.localhost
+#
 # Environment Variables:
 # - Copy example.env to .env and configure your settings
 # - TRAEFIK_DASHBOARD_CREDENTIALS: Basic auth credentials for Traefik dashboard
 #
 # Security Notes:
-# - Traefik dashboard is exposed on HTTP by default (development only)
-# - For production, enable HTTPS and basic authentication
+# - HTTPS redirection is enforced via entrypoint configuration
+# - Self-signed certificates used for development (browser warnings expected)
 # - Portainer runs with read-only Docker socket access
 # - Both services run with no-new-privileges security option
 #
