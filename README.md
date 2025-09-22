@@ -1,6 +1,14 @@
-# Traefik GitOps Configuration
+# Traefik Infrastructure
 
-This repository contains a GitOps-ready Traefik configuration that supports both development and production environments.
+Modern Traefik setup with GitOps patterns, self-signed certificates for development, and Let's Encrypt for production. Includes application integration templates for teams.
+
+## 📖 Documentation
+
+- 🚀 **[Quick Integration Guide](SIMPLE-INTEGRATION.md)** - Add Traefik to your app in 2 minutes
+- 📚 **[Detailed Integration](APPLICATION-INTEGRATION.md)** - Complete documentation and patterns
+- 🛠️ **[Service Templates](services/README.md)** - Ready-to-use service examples
+
+---
 
 ## 🏗️ Architecture
 
@@ -165,3 +173,32 @@ openssl s_client -connect traefik.yourdomain.com:443 -servername traefik.yourdom
 2. Ensure production override works correctly
 3. Update documentation for any new features
 4. Verify both HTTP and HTTPS access work properly
+
+## 🗂️ Repository Management
+
+### Log Management
+```bash
+# Check log status
+./scripts/manage-logs.sh status
+
+# Clean old logs
+./scripts/manage-logs.sh clean
+
+# Rotate current logs
+./scripts/manage-logs.sh rotate
+```
+
+### Configuration Validation
+```bash
+# Validate Traefik configuration
+./scripts/validate-traefik-config.sh
+
+# Validate application integration
+./scripts/validate-traefik-config.sh path/to/app/docker-compose.yml path/to/app/docker-compose.traefik.yml
+```
+
+### Git Best Practices
+- Log files are automatically ignored (see `.gitignore`)
+- Use `./scripts/manage-logs.sh setup` to fix permissions
+- Keep environment files as `.env.example` templates
+- Commit configuration changes, not runtime data
