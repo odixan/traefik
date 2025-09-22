@@ -1,0 +1,2 @@
+# This file ensures the dynamic config directory is preserved in git
+# Dynamic configuration files are tracked

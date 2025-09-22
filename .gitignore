@@ -1,0 +1,228 @@
+# Traefik GitOps Repository - .gitignore
+
+# Environment Files
+.env
+*.env
+!*.env.example
+!example.env
+
+# Logs
+logs/
+*.log
+log/
+
+# Traefik specific files
+config/acme.json
+config/acme-*.json
+config/users.txt
+config/certs/*.key
+config/certs/*.crt
+config/certs/*.pem
+
+# Pi-hole specific (if using Pi-hole service)
+pihole/
+pihole-data/
+
+# Docker volumes and data
+*-data/
+data/
+volumes/
+
+# Backup files
+*.backup
+*.bak
+backups/
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+tmp/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.vim/
+.netrwhist
+
+# Node.js (if using Node-based tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python (if using Python scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Docker override files (keep examples)
+docker-compose.override.yml
+!docker-compose.override.yml.example
+
+# SSL/TLS certificates (generated ones)
+*.crt
+*.key
+*.pem
+*.p12
+*.pfx
+!localhost.crt
+!localhost.key
+
+# Secrets and credentials
+secrets/
+*.secret
+*.credential
+*.password
+auth/
+htpasswd
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Archive files
+*.tar
+*.tar.gz
+*.zip
+*.rar
+
+# Configuration overrides (keep examples)
+config/local/
+config/override/
+!config/local/.gitkeep
+!config/override/.gitkeep
+
+# Service-specific ignores
+# Portainer
+portainer-data/
+
+# Grafana
+grafana-data/
+
+# Prometheus
+prometheus-data/
+
+# InfluxDB
+influxdb-data/
+
+# Redis
+redis-data/
+
+# PostgreSQL
+postgres-data/
+postgresql-data/
+
+# MySQL/MariaDB
+mysql-data/
+mariadb-data/
+
+# MongoDB
+mongo-data/
+mongodb-data/
+
+# Custom application data
+app-data/
+application-data/
+
+# Runtime files
+*.pid
+*.seed
+*.coverage
+.grunt
+.lock-wscript
+.wafpickle-*
+.node_repl_history
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env.test
+.env.production
+.env.local
+.env.development
+
+# Terraform (if using for infrastructure)
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Ansible (if using for configuration)
+*.retry
+
+# Git patches
+*.patch
+
+# Local development overrides
+docker-compose.local.yml
+docker-compose.dev.yml
+!docker-compose.local.yml.example
+!docker-compose.dev.yml.example
+
+# Documentation builds
+docs/_build/
+site/
+
+# Testing
+coverage/
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Local scripts (keep examples)
+scripts/local/
+!scripts/local/.gitkeep
+
+# Cache directories
+.cache/
+cache/
+
+# Runtime configuration
+runtime/
+
+# Keep important empty directories
+!logs/.gitkeep
+!config/certs/.gitkeep
+!config/dynamic/.gitkeep
