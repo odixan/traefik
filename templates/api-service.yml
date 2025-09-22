@@ -1,0 +1,60 @@
+# Traefik Integration Template for API Services
+# Copy this file to your API repository as 'docker-compose.traefik.yml'
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.traefik.yml up -d
+
+networks:
+  proxy:
+    external: true
+
+services:
+  # Replace 'api' with your actual service name
+  api:
+    networks:
+      - default
+      - proxy
+    environment:
+      # Add any environment variables your API needs
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=${SERVICE_PORT:-3000}
+      - API_VERSION=${API_VERSION:-v1}
+    labels:
+      - "traefik.enable=true"
+
+      # Development HTTP API routing
+      - "traefik.http.routers.${SERVICE_NAME:-myapi}.rule=Host(`${API_DOMAIN:-api.localhost}`) && PathPrefix(`/${API_VERSION:-v1}/${SERVICE_NAME:-myapi}`)"
+      - "traefik.http.routers.${SERVICE_NAME:-myapi}.entrypoints=web"
+      - "traefik.http.routers.${SERVICE_NAME:-myapi}.service=${SERVICE_NAME:-myapi}"
+
+      # Development HTTPS API routing
+      - "traefik.http.routers.${SERVICE_NAME:-myapi}-secure.rule=Host(`${API_DOMAIN:-api.localhost}`) && PathPrefix(`/${API_VERSION:-v1}/${SERVICE_NAME:-myapi}`)"
+      - "traefik.http.routers.${SERVICE_NAME:-myapi}-secure.entrypoints=websecure"
+      - "traefik.http.routers.${SERVICE_NAME:-myapi}-secure.tls=true"
+      - "traefik.http.routers.${SERVICE_NAME:-myapi}-secure.service=${SERVICE_NAME:-myapi}"
+
+      # Service definition
+      - "traefik.http.services.${SERVICE_NAME:-myapi}.loadbalancer.server.port=${SERVICE_PORT:-3000}"
+
+      # Path prefix stripping (if your API doesn't expect the prefix)
+      - "traefik.http.middlewares.${SERVICE_NAME:-myapi}-stripprefix.stripprefix.prefixes=/${API_VERSION:-v1}/${SERVICE_NAME:-myapi}"
+
+      # Apply API-specific middlewares
+      - "traefik.http.routers.${SERVICE_NAME:-myapi}.middlewares=${SERVICE_NAME:-myapi}-stripprefix"
+      - "traefik.http.routers.${SERVICE_NAME:-myapi}-secure.middlewares=security-headers@file,cors@file,rate-limit@file,${SERVICE_NAME:-myapi}-stripprefix"
+
+      # Health check configuration
+      - "traefik.http.services.${SERVICE_NAME:-myapi}.loadbalancer.healthcheck.path=${HEALTH_CHECK_PATH:-/health}"
+      - "traefik.http.services.${SERVICE_NAME:-myapi}.loadbalancer.healthcheck.interval=${HEALTH_CHECK_INTERVAL:-30s}"
+
+      # Service metadata
+      - "org.opencontainers.image.title=${SERVICE_TITLE:-My API}"
+      - "org.opencontainers.image.version=${SERVICE_VERSION:-1.0.0}"
+
+# Alternative configuration for APIs that should be accessible at root level
+# Uncomment and modify if you want your API at api.localhost/ instead of api.localhost/v1/myapi/
+#
+# services:
+#   api:
+#     labels:
+#       # Root level API routing
+#       - "traefik.http.routers.${SERVICE_NAME:-myapi}.rule=Host(`${SERVICE_NAME:-myapi}.localhost`)"
+#       - "traefik.http.routers.${SERVICE_NAME:-myapi}-secure.rule=Host(`${SERVICE_NAME:-myapi}.localhost`)"

@@ -1,0 +1,22 @@
+# Pi-hole Production Override
+# Use: docker-compose -f docker-compose.yml -f services/pihole.yml -f services/pihole.prod.yml up -d
+
+services:
+  pihole:
+    environment:
+      # Production environment variables
+      - FTLCONF_LOCAL_IPV4=${PIHOLE_SERVER_IP}  # Your server's public IP
+      - VIRTUAL_HOST=pihole.${DOMAIN:-yourdomain.com}
+
+    labels:
+      # Production Pi-hole (HTTPS with Let's Encrypt)
+      - "traefik.http.routers.pihole-secure-prod.rule=Host(`pihole.${DOMAIN:-yourdomain.com}`)"
+      - "traefik.http.routers.pihole-secure-prod.entrypoints=websecure"
+      - "traefik.http.routers.pihole-secure-prod.tls=true"
+      - "traefik.http.routers.pihole-secure-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.pihole-secure-prod.service=pihole"
+      - "traefik.http.routers.pihole-secure-prod.middlewares=security-headers@file,basic-auth@file"
+
+      # Disable local development routes in production
+      - "traefik.http.routers.pihole.rule=Host(`_disabled_`)"
+      - "traefik.http.routers.pihole-secure-local.rule=Host(`_disabled_`)"

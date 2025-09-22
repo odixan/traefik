@@ -1,0 +1,48 @@
+# Traefik Integration Template for Web Applications
+# Copy this file to your application repository as 'docker-compose.traefik.yml'
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.traefik.yml up -d
+
+networks:
+  proxy:
+    external: true
+
+services:
+  # Replace 'web' with your actual service name
+  web:
+    networks:
+      - default
+      - proxy
+    environment:
+      # Add any environment variables your app needs
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=${SERVICE_PORT:-3000}
+    labels:
+      - "traefik.enable=true"
+
+      # Development HTTP routing
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}.rule=Host(`${SERVICE_NAME:-myapp}.localhost`)"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}.entrypoints=web"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}.service=${SERVICE_NAME:-myapp}"
+
+      # Development HTTPS routing (self-signed certificates)
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-secure.rule=Host(`${SERVICE_NAME:-myapp}.localhost`)"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-secure.entrypoints=websecure"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-secure.tls=true"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-secure.service=${SERVICE_NAME:-myapp}"
+
+      # Service definition
+      - "traefik.http.services.${SERVICE_NAME:-myapp}.loadbalancer.server.port=${SERVICE_PORT:-3000}"
+
+      # Apply standard security middlewares
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-secure.middlewares=security-headers@file,compress@file"
+
+      # Health check configuration (optional)
+      - "traefik.http.services.${SERVICE_NAME:-myapp}.loadbalancer.healthcheck.path=${HEALTH_CHECK_PATH:-/health}"
+      - "traefik.http.services.${SERVICE_NAME:-myapp}.loadbalancer.healthcheck.interval=${HEALTH_CHECK_INTERVAL:-30s}"
+
+      # Service metadata for monitoring
+      - "org.opencontainers.image.title=${SERVICE_TITLE:-My Application}"
+      - "org.opencontainers.image.version=${SERVICE_VERSION:-1.0.0}"
+
+# Optional: Add production overrides in a separate file
+# Create docker-compose.prod.yml with production-specific configurations

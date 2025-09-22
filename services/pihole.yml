@@ -1,0 +1,134 @@
+# Pi-hole with Traefik Integration
+# This example shows how to add Pi-hole DNS server to your Traefik setup
+# Usage: docker-compose -f docker-compose.yml -f services/pihole.yml up -d
+
+networks:
+  proxy:
+    external: true
+  pihole:
+    driver: bridge
+    internal: false
+
+services:
+  pihole:
+    image: pihole/pihole:2025.08.0
+    container_name: pihole
+    restart: unless-stopped
+    hostname: pihole
+    networks:
+      - proxy
+      - pihole
+    ports:
+      # DNS ports (required for Pi-hole functionality)
+      - "53:53/tcp"
+      - "53:53/udp"
+      # DHCP port (optional, only if using Pi-hole as DHCP server)
+      # - "67:67/udp"
+    environment:
+      # Pi-hole configuration
+      - TZ=${TZ:-UTC}
+      - WEBPASSWORD=${PIHOLE_PASSWORD:-admin123}
+      - FTLCONF_LOCAL_IPV4=${PIHOLE_SERVER_IP:-192.168.1.100}
+
+      # DNS configuration
+      - PIHOLE_DNS_=1.1.1.1;8.8.8.8  # Upstream DNS servers
+      - DNS_FQDN_REQUIRED=true
+      - DNS_BOGUS_PRIV=true
+      - DNSSEC=false
+
+      # Web interface configuration
+      - VIRTUAL_HOST=pihole.localhost
+      - WEB_PORT=80
+
+      # Performance settings
+      - DNSMASQ_LISTENING=all
+
+    volumes:
+      # Pi-hole data persistence
+      - pihole_config:/etc/pihole
+      - pihole_dnsmasq:/etc/dnsmasq.d
+
+      # Custom configurations (optional)
+      # - ./pihole/custom.list:/etc/pihole/custom.list:ro
+      # - ./pihole/adlists.list:/etc/pihole/adlists.list:ro
+
+    labels:
+      - "traefik.enable=true"
+
+      # HTTP routes for development
+      - "traefik.http.routers.pihole.rule=Host(`pihole.localhost`)"
+      - "traefik.http.routers.pihole.entrypoints=web"
+      - "traefik.http.routers.pihole.service=pihole"
+      - "traefik.http.services.pihole.loadbalancer.server.port=80"
+
+      # HTTPS routes for local development (self-signed certs)
+      - "traefik.http.routers.pihole-secure-local.rule=Host(`pihole.localhost`)"
+      - "traefik.http.routers.pihole-secure-local.entrypoints=websecure"
+      - "traefik.http.routers.pihole-secure-local.tls=true"
+      - "traefik.http.routers.pihole-secure-local.service=pihole"
+
+      # Add security headers
+      - "traefik.http.routers.pihole-secure-local.middlewares=security-headers@file"
+
+    healthcheck:
+      test: ["CMD", "dig", "@127.0.0.1", "google.com"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+    # Security settings
+    security_opt:
+      - no-new-privileges:true
+    cap_add:
+      - NET_ADMIN  # Required for DHCP functionality (if needed)
+
+    depends_on:
+      - traefik
+
+  # Optional: Unbound as recursive DNS resolver (more privacy)
+  unbound:
+    image: mvance/unbound:1.19.0
+    container_name: unbound
+    restart: unless-stopped
+    networks:
+      - pihole
+    volumes:
+      - unbound_config:/opt/unbound/etc/unbound
+      # Custom configuration (optional)
+      # - ./unbound/unbound.conf:/opt/unbound/etc/unbound/unbound.conf:ro
+    healthcheck:
+      test: ["CMD", "nslookup", "google.com", "127.0.0.1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  pihole_config:
+    driver: local
+    name: pihole_config
+  pihole_dnsmasq:
+    driver: local
+    name: pihole_dnsmasq
+  unbound_config:
+    driver: local
+    name: unbound_config

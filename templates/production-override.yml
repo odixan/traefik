@@ -1,0 +1,73 @@
+# Production Override Template
+# Copy this file to your application repository as 'docker-compose.prod.yml'
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.traefik.yml -f docker-compose.prod.yml up -d
+
+services:
+  # Production overrides for web applications
+  web:
+    labels:
+      # Production domain routing with Let's Encrypt certificates
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-prod.rule=Host(`${PRODUCTION_DOMAIN:-${SERVICE_NAME:-myapp}.yourdomain.com}`)"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-prod.entrypoints=websecure"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-prod.service=${SERVICE_NAME:-myapp}"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-prod.middlewares=security-headers@file,compress@file,rate-limit@file"
+
+      # Disable development routes in production
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}.rule="
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-secure.rule="
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+
+  # Production overrides for frontend (if using fullstack template)
+  frontend:
+    labels:
+      # Production frontend routing
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-frontend-prod.rule=Host(`${PRODUCTION_DOMAIN:-${SERVICE_NAME:-myapp}.yourdomain.com}`)"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-frontend-prod.entrypoints=websecure"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-frontend-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-frontend-prod.service=${SERVICE_NAME:-myapp}-frontend"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-frontend-prod.middlewares=security-headers@file,compress@file"
+
+      # Disable development routes
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-frontend.rule="
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-frontend-secure.rule="
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_API_URL=https://${PRODUCTION_DOMAIN:-${SERVICE_NAME:-myapp}.yourdomain.com}/api
+
+  # Production overrides for backend (if using fullstack template)
+  backend:
+    labels:
+      # Production backend API routing
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-backend-prod.rule=Host(`${PRODUCTION_DOMAIN:-${SERVICE_NAME:-myapp}.yourdomain.com}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-backend-prod.entrypoints=websecure"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-backend-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-backend-prod.service=${SERVICE_NAME:-myapp}-backend"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-backend-prod.middlewares=security-headers@file,cors@file,rate-limit@file"
+
+      # Disable development routes
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-backend.rule="
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-backend-secure.rule="
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+
+  # Production overrides for API services
+  api:
+    labels:
+      # Production API routing
+      - "traefik.http.routers.${SERVICE_NAME:-myapi}-prod.rule=Host(`${API_PRODUCTION_DOMAIN:-api.yourdomain.com}`) && PathPrefix(`/${API_VERSION:-v1}/${SERVICE_NAME:-myapi}`)"
+      - "traefik.http.routers.${SERVICE_NAME:-myapi}-prod.entrypoints=websecure"
+      - "traefik.http.routers.${SERVICE_NAME:-myapi}-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.${SERVICE_NAME:-myapi}-prod.service=${SERVICE_NAME:-myapi}"
+      - "traefik.http.routers.${SERVICE_NAME:-myapi}-prod.middlewares=security-headers@file,cors@file,rate-limit@file,${SERVICE_NAME:-myapi}-stripprefix"
+
+      # Disable development routes
+      - "traefik.http.routers.${SERVICE_NAME:-myapi}.rule="
+      - "traefik.http.routers.${SERVICE_NAME:-myapi}-secure.rule="
+    environment:
+      - NODE_ENV=production
+      - FLASK_ENV=production
+      - LOG_LEVEL=${LOG_LEVEL:-info}

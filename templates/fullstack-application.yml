@@ -1,0 +1,103 @@
+# Traefik Integration Template for Full-Stack Applications
+# This template handles both frontend and backend services
+# Copy this file to your application repository as 'docker-compose.traefik.yml'
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.traefik.yml up -d
+
+networks:
+  proxy:
+    external: true
+
+services:
+  # Frontend service (React, Vue, Angular, etc.)
+  frontend:
+    networks:
+      - default
+      - proxy
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - REACT_APP_API_URL=${FRONTEND_API_URL:-http://localhost:3000}
+    labels:
+      - "traefik.enable=true"
+
+      # Frontend HTTP routing
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-frontend.rule=Host(`${SERVICE_NAME:-myapp}.localhost`)"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-frontend.entrypoints=web"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-frontend.service=${SERVICE_NAME:-myapp}-frontend"
+
+      # Frontend HTTPS routing
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-frontend-secure.rule=Host(`${SERVICE_NAME:-myapp}.localhost`)"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-frontend-secure.entrypoints=websecure"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-frontend-secure.tls=true"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-frontend-secure.service=${SERVICE_NAME:-myapp}-frontend"
+
+      # Frontend service definition
+      - "traefik.http.services.${SERVICE_NAME:-myapp}-frontend.loadbalancer.server.port=${FRONTEND_PORT:-80}"
+
+      # Frontend middlewares
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-frontend-secure.middlewares=security-headers@file,compress@file"
+
+      # Service metadata
+      - "org.opencontainers.image.title=${SERVICE_TITLE:-My App} Frontend"
+      - "org.opencontainers.image.version=${SERVICE_VERSION:-1.0.0}"
+
+  # Backend service (Node.js, Python, etc.)
+  backend:
+    networks:
+      - default
+      - proxy
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=${BACKEND_PORT:-3000}
+      - DATABASE_URL=${DATABASE_URL:-}
+    labels:
+      - "traefik.enable=true"
+
+      # Backend HTTP API routing
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-backend.rule=Host(`${SERVICE_NAME:-myapp}.localhost`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-backend.entrypoints=web"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-backend.service=${SERVICE_NAME:-myapp}-backend"
+
+      # Backend HTTPS API routing
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-backend-secure.rule=Host(`${SERVICE_NAME:-myapp}.localhost`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-backend-secure.entrypoints=websecure"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-backend-secure.tls=true"
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-backend-secure.service=${SERVICE_NAME:-myapp}-backend"
+
+      # Backend service definition
+      - "traefik.http.services.${SERVICE_NAME:-myapp}-backend.loadbalancer.server.port=${BACKEND_PORT:-3000}"
+
+      # Backend middlewares (includes CORS for API)
+      - "traefik.http.routers.${SERVICE_NAME:-myapp}-backend-secure.middlewares=security-headers@file,cors@file,rate-limit@file"
+
+      # Health check configuration
+      - "traefik.http.services.${SERVICE_NAME:-myapp}-backend.loadbalancer.healthcheck.path=${HEALTH_CHECK_PATH:-/api/health}"
+      - "traefik.http.services.${SERVICE_NAME:-myapp}-backend.loadbalancer.healthcheck.interval=${HEALTH_CHECK_INTERVAL:-30s}"
+
+      # Service metadata
+      - "org.opencontainers.image.title=${SERVICE_TITLE:-My App} Backend"
+      - "org.opencontainers.image.version=${SERVICE_VERSION:-1.0.0}"
+
+  # Optional: Database service (if needed for development)
+  # Uncomment if you want to expose a database admin interface
+  #
+  # db-admin:
+  #   networks:
+  #     - default
+  #     - proxy
+  #   labels:
+  #     - "traefik.enable=true"
+  #
+  #     # Database admin interface routing
+  #     - "traefik.http.routers.${SERVICE_NAME:-myapp}-db-admin.rule=Host(`${SERVICE_NAME:-myapp}-db.localhost`)"
+  #     - "traefik.http.routers.${SERVICE_NAME:-myapp}-db-admin.entrypoints=web"
+  #     - "traefik.http.routers.${SERVICE_NAME:-myapp}-db-admin.service=${SERVICE_NAME:-myapp}-db-admin"
+  #
+  #     - "traefik.http.routers.${SERVICE_NAME:-myapp}-db-admin-secure.rule=Host(`${SERVICE_NAME:-myapp}-db.localhost`)"
+  #     - "traefik.http.routers.${SERVICE_NAME:-myapp}-db-admin-secure.entrypoints=websecure"
+  #     - "traefik.http.routers.${SERVICE_NAME:-myapp}-db-admin-secure.tls=true"
+  #     - "traefik.http.routers.${SERVICE_NAME:-myapp}-db-admin-secure.service=${SERVICE_NAME:-myapp}-db-admin"
+  #
+  #     - "traefik.http.services.${SERVICE_NAME:-myapp}-db-admin.loadbalancer.server.port=8080"
+  #
+  #     # Add basic auth for security
+  #     - "traefik.http.routers.${SERVICE_NAME:-myapp}-db-admin-secure.middlewares=basic-auth@file,security-headers@file"

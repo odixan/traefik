@@ -6,10 +6,13 @@
 !*.env.example
 !example.env
 
-# Logs
-logs/
+# Logs (ignore all log files but keep directory structure)
+logs/*.log
+logs/*.log.*
+logs/*.gz
 *.log
 log/
+!logs/.gitkeep
 
 # Traefik specific files
 config/acme.json
