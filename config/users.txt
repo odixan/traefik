@@ -1,0 +1,4 @@
+# Basic Auth Users File
+# Generate using: echo $(htpasswd -nb username password) | sed -e s/\\$/\\$\\$/g
+# Example user: admin / password123
+admin:$2y$10$L4y/3m6a.Vno7zMTwCOPHuM7JjLKG4E/F1YXhF5EGRiVj9k4Lq5I2

@@ -1,0 +1,53 @@
+# TLS and Certificate Configuration
+# This file defines TLS certificates and options for both development and production
+
+tls:
+  # Certificate stores - for local development with self-signed certificates
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/traefik/certs/localhost.crt
+        keyFile: /etc/traefik/certs/localhost.key
+
+  # TLS certificates for local development domains
+  certificates:
+    - certFile: /etc/traefik/certs/localhost.crt
+      keyFile: /etc/traefik/certs/localhost.key
+      stores:
+        - default
+
+  # TLS options for different security levels
+  options:
+    # Default TLS configuration (balanced security and compatibility)
+    default:
+      minVersion: "VersionTLS12"
+      maxVersion: "VersionTLS13"
+      sslStrategies:
+        - "tls.SniStrict"
+      cipherSuites:
+        - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
+        - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_RSA_WITH_AES_128_GCM_SHA256"
+      curvePreferences:
+        - "CurveP521"
+        - "CurveP384"
+
+    # Modern TLS configuration (production recommended)
+    modern:
+      minVersion: "VersionTLS13"
+      cipherSuites:
+        - "TLS_AES_256_GCM_SHA384"
+        - "TLS_AES_128_GCM_SHA256"
+        - "TLS_CHACHA20_POLY1305_SHA256"
+
+    # Legacy TLS configuration (for older clients if needed)
+    legacy:
+      minVersion: "VersionTLS10"
+      maxVersion: "VersionTLS13"
+
+# Notes:
+# - Development: Uses self-signed certificates defined above
+# - Production: Uses Let's Encrypt certificates via ACME resolver
+# - Switch between environments by updating docker-compose.yml labels

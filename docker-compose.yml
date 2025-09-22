@@ -1,7 +1,6 @@
----
-# -- (Optional) When using a custom network
 networks:
   proxy:
+    driver: bridge
     external: true
 
 # secrets:
@@ -11,66 +10,134 @@ networks:
 services:
   traefik:
     image: traefik:v3.5
+    container_name: traefik
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
     networks:
       - proxy
     ports:
-      - 80:80
-      - 443:443
-    # - 8080:8080 # -- (Optional) Enable Dashboard, don't do in production
+      - "80:80"
+      - "443:443"
+      - "8081:8081" # Dashboard - secure it in production
     environment:
-      TRAEFIK_DASBOARD_CREDENTIALS: ${TRAEFIK_DASBOARD_CREDENTIALS}
-    # secrets:
-    #   - gd_api_token
-    env_file: .env
+      - TRAEFIK_DASHBOARD_CREDENTIALS=${TRAEFIK_DASHBOARD_CREDENTIALS}
+    env_file:
+      - .env
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /etc/localtime:/etc/localtime:ro                      # OR use TZ=Europe/Madrid as envirnoment variable
-      #- ./config/traefik.yaml:/traefik.yaml:ro                # Base configuration file for traefik
-      #- ./config/acme.json:/acme.json                        # This file is used to store online certs we need to apply chmod 600 to this file.
-      #- ./config/certs/:/etc/traefik/certs/                  # This directory is for place a self signed certificates
-      #- ./users.txt:/users.txt:ro                            # We use this file to store authentications to traefik's dashboard
-      #- ./logs:/var/log/traefik                              # We mount in this directory all logs for traefik servide
+      - /etc/localtime:/etc/localtime:ro
+      # Configuration files
+      - ./config/traefik.yaml:/etc/traefik/traefik.yaml:ro
+      - ./config/dynamic:/etc/traefik/dynamic:ro
+      - ./config/certs:/etc/traefik/certs:ro
+      - ./config/acme.json:/acme.json
+      - ./config/users.txt:/etc/traefik/users.txt:ro
+      - ./logs:/var/log/traefik
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.traefik.entrypoints=web
-      #- traefik.http.routers.traefik-secure.entrypoints=websecure
-      # - traefik.http.routers.traefik-secure.middlewares=myauth@file
-      # - traefik.http.routers.traefik-secure.service=api@internal
-      # - traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=websecure
+      - "traefik.enable=true"
+      # HTTP routes
+      - "traefik.http.routers.api.rule=Host(`traefik.localhost`)"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.routers.api.service=api@internal"
+
+      # HTTPS routes for local development (self-signed certs)
+      - "traefik.http.routers.api-secure-local.rule=Host(`traefik.localhost`)"
+      - "traefik.http.routers.api-secure-local.entrypoints=websecure"
+      - "traefik.http.routers.api-secure-local.tls=true"
+      - "traefik.http.routers.api-secure-local.service=api@internal"
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
 
 
-  # Portainer
+  # Portainer - Container management UI
   portainer:
-    image: portainer/portainer-ce:alpine
+    image: portainer/portainer-ce:2.34.0-alpine
+    container_name: portainer
     restart: unless-stopped
-    ports:
-      - 9000:9000
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - portainer-data:/data
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.portainer.tls=true
-      - traefik.http.routers.portainer.entrypoints=web, websecure
-      - traefik.http.services.portainer.loadbalancer.server.port=9000
-    depends_on:
-      - traefik
+    security_opt:
+      - no-new-privileges:true
     networks:
       - proxy
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - portainer-data:/data
+    labels:
+      - "traefik.enable=true"
+      # HTTP routes
+      - "traefik.http.routers.portainer.rule=Host(`portainer.localhost`)"
+      - "traefik.http.routers.portainer.entrypoints=web"
+      - "traefik.http.routers.portainer.service=portainer"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+
+      # HTTPS routes for local development (self-signed certs)
+      - "traefik.http.routers.portainer-secure-local.rule=Host(`portainer.localhost`)"
+      - "traefik.http.routers.portainer-secure-local.entrypoints=websecure"
+      - "traefik.http.routers.portainer-secure-local.tls=true"
+      - "traefik.http.routers.portainer-secure-local.service=portainer"
+    depends_on:
+      traefik:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9000/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
 
 volumes:
   portainer-data:
+    driver: local
     name: portainer-data
 
 
-# Seguridad para el Dashboard
-
-# Note: when used in docker-compose.yml all dollar signs in the hash need to be doubled for escaping.
-# To create user:password pair, it's possible to use this command:
-# echo $(htpasswd -nb user password) | sed -e s/\\$/\\$\\$/g
-# echo $(htpasswd -nb admin M4rk3tpl4c3++) | sed -e s/\\$/\\$\\$/g
-# Also note that dollar signs should NOT be doubled when they not evaluated (e.g. Ansible docker_container module).
-# pass -> M4rk3tpl4c3++
+# Configuration Notes:
+#
+# Environment Variables:
+# - Copy example.env to .env and configure your settings
+# - TRAEFIK_DASHBOARD_CREDENTIALS: Basic auth credentials for Traefik dashboard
+#
+# Security Notes:
+# - Traefik dashboard is exposed on HTTP by default (development only)
+# - For production, enable HTTPS and basic authentication
+# - Portainer runs with read-only Docker socket access
+# - Both services run with no-new-privileges security option
+#
+# Network Configuration:
+# - External 'proxy' network must be created before running:
+#   docker network create proxy
+#
+# SSL/TLS Configuration:
+# - Uncomment and configure the HTTPS labels for production use
+# - Create acme.json file with proper permissions: chmod 600 acme.json
+# - Configure your domain names in the Host() rules
+#
+# Authentication:
+# - Create user credentials using htpasswd:
+#   echo $(htpasswd -nb user password) | sed -e s/\\$/\\$\\$/g
+# - Store in config/users.txt file
+#
+# Example production setup commands:
+# 1. docker network create proxy
+# 2. cp example.env .env && edit .env
+# 3. mkdir -p config logs
+# 4. touch config/acme.json && chmod 600 config/acme.json
+# 5. docker-compose up -d

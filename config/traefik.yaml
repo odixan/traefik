@@ -1,0 +1,109 @@
+# Traefik v3.5 Configuration
+# https://doc.traefik.io/traefik/reference/static-configuration/file/
+
+# Global configuration
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+# API and Dashboard configuration
+api:
+  dashboard: true
+  debug: false
+  insecure: true  # Set to false in production with HTTPS
+
+# Entry Points configuration
+entryPoints:
+  web:
+    address: ":80"
+    # Redirect HTTP to HTTPS (uncomment for production)
+    # http:
+    #   redirections:
+    #     entryPoint:
+    #       to: websecure
+    #       scheme: https
+    #       permanent: true
+
+  websecure:
+    address: ":443"
+    # HTTP/3 support (optional)
+    # http3:
+    #   advertisedPort: 443
+
+  # Traefik dashboard (when insecure: false)
+  traefik:
+    address: ":8081"
+
+# Providers configuration
+providers:
+  # Docker provider
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: "proxy"
+    watch: true
+
+  # File provider for additional configuration
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+
+# Certificate Resolvers
+certificatesResolvers:
+  # Let's Encrypt for production
+  letsencrypt:
+    acme:
+      email: your-email@example.com  # Change this to your email
+      storage: /acme.json
+      keyType: EC256
+      # HTTP Challenge (use only one)
+      httpChallenge:
+        entryPoint: web
+      # DNS Challenge (alternative to HTTP challenge)
+      # dnsChallenge:
+      #   provider: cloudflare
+      #   resolvers:
+      #     - "1.1.1.1:53"
+      #     - "8.8.8.8:53"
+
+# Note: Self-signed certificates are configured via the file provider
+# in /etc/traefik/dynamic/tls.yaml for local development
+
+# Logging configuration
+log:
+  level: INFO
+  format: json
+  filePath: /var/log/traefik/traefik.log
+
+# Access logs
+accessLog:
+  format: json
+  filePath: /var/log/traefik/access.log
+  bufferingSize: 100
+  filters:
+    statusCodes:
+      - "400-499"
+      - "500-599"
+    retryAttempts: true
+    minDuration: "10ms"
+
+# Metrics (optional)
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addServicesLabels: true
+    addRoutersLabels: true
+
+# Ping endpoint for health checks
+ping:
+  entryPoint: "traefik"
+
+# Tracing (optional)
+# tracing:
+#   jaeger:
+#     samplingServerURL: http://jaeger:14268/api/sampling
+#     localAgentHostPort: jaeger:6831
+
+# Pilot (Traefik Hub - optional)
+# pilot:
+#   token: "your-pilot-token"

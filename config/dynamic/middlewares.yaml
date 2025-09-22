@@ -1,0 +1,64 @@
+# Dynamic configuration for middlewares and additional settings
+# This file is watched by Traefik and reloaded automatically
+
+http:
+  middlewares:
+    # Security headers middleware
+    security-headers:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+        customResponseHeaders:
+          X-Robots-Tag: "noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex"
+          server: ""
+          X-Powered-By: ""
+        sslProxyHeaders:
+          X-Forwarded-Proto: "https"
+        referrerPolicy: "strict-origin-when-cross-origin"
+        hostsProxyHeaders:
+          - "X-Forwarded-Host"
+        customFrameOptionsValue: "SAMEORIGIN"
+        contentTypeNosniff: true
+        browserXssFilter: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsSeconds: 31536000
+        stsPreload: true
+
+    # Basic authentication middleware (example)
+    basic-auth:
+      basicAuth:
+        usersFile: "/etc/traefik/users.txt"
+
+    # Rate limiting middleware
+    rate-limit:
+      rateLimit:
+        burst: 100
+        average: 50
+
+    # IP allowlist middleware (example)
+    # local-only:
+    #   ipAllowList:
+    #     sourceRange:
+    #       - "127.0.0.1/32"
+    #       - "192.168.0.0/16"
+    #       - "172.16.0.0/12"
+    #       - "10.0.0.0/8"
+
+    # Compress responses
+    compress:
+      compress: {}
+
+    # CORS middleware (example)
+    cors:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - OPTIONS
+          - PUT
+          - POST
+          - DELETE
+        accessControlAllowOriginList:
+          - "*"
+        accessControlMaxAge: 100
+        addVaryHeader: true

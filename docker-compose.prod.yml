@@ -1,0 +1,32 @@
+# Production Override Example
+# Use: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+version: '3.8'
+
+services:
+  traefik:
+    labels:
+      # Production Traefik Dashboard (HTTPS with Let's Encrypt)
+      - "traefik.http.routers.api-secure-prod.rule=Host(`traefik.${DOMAIN:-yourdomain.com}`)"
+      - "traefik.http.routers.api-secure-prod.entrypoints=websecure"
+      - "traefik.http.routers.api-secure-prod.tls=true"
+      - "traefik.http.routers.api-secure-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.api-secure-prod.service=api@internal"
+      - "traefik.http.routers.api-secure-prod.middlewares=basic-auth@file"
+
+      # Disable local development routes in production
+      - "traefik.http.routers.api.rule=Host(`_disabled_`)"
+      - "traefik.http.routers.api-secure-local.rule=Host(`_disabled_`)"
+
+  portainer:
+    labels:
+      # Production Portainer (HTTPS with Let's Encrypt)
+      - "traefik.http.routers.portainer-secure-prod.rule=Host(`portainer.${DOMAIN:-yourdomain.com}`)"
+      - "traefik.http.routers.portainer-secure-prod.entrypoints=websecure"
+      - "traefik.http.routers.portainer-secure-prod.tls=true"
+      - "traefik.http.routers.portainer-secure-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.portainer-secure-prod.service=portainer"
+
+      # Disable local development routes in production
+      - "traefik.http.routers.portainer.rule=Host(`_disabled_`)"
+      - "traefik.http.routers.portainer-secure-local.rule=Host(`_disabled_`)"
